@@ -47,11 +47,16 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: build and push fulcio
+      - name: build fulcio
         run: |
           cd fulcio
           docker build -t quay.io/securesign/fulcio:${FULCIO_VER} .
-          docker push quay.io/securesign/fulcio:${FULCIO_VER}
+
+      - name: push fulcio
+        if: github.event.pull_request.merged == true
+        run: docker push quay.io/securesign/fulcio:${FULCIO_VER}
+
+      
 
   build-rekor:
     runs-on: ubuntu-20.04
@@ -84,6 +89,7 @@ jobs:
             ./Dockerfile
 
       - name: Push To quay.io
+        if: github.event.pull_request.merged == true
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
@@ -187,14 +193,18 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: build and push trillian
+      - name: build trillian
         run: |
           mv redhat/overlays/log_server/Dockerfile .
           podman build -t quay.io/securesign/trillian_log_server:${TRILLIAN_VER} .
-          podman push quay.io/securesign/trillian_log_server:${TRILLIAN_VER}
           mv Dockerfile redhat/overlays/log_server
           mv redhat/overlays/log_signer/Dockerfile .
           podman build -t quay.io/securesign/trillian_log_signer:${TRILLIAN_VER} .
+
+      - name: push trillian
+        if: github.event.pull_request.merged == true
+        run: |
+          podman push quay.io/securesign/trillian_log_server:${TRILLIAN_VER}
           podman push quay.io/securesign/trillian_log_signer:${TRILLIAN_VER}
 
   build-trillian-db:
@@ -231,6 +241,10 @@ jobs:
           cd trillian
           cp -rp ../securesign/trillian/* examples/deployment/docker/db_server/
           podman build . --tag quay.io/securesign/trillian-db:${TRILLIAN_DB_VER} -f examples/deployment/docker/db_server/Dockerfile
+        
+      - name: push trillian
+        if: github.event.pull_request.merged == true
+        run: |
           podman push quay.io/securesign/trillian-db:${TRILLIAN_DB_VER}
 
   build-tsa:
@@ -285,6 +299,7 @@ jobs:
         run: podman build -t quay.io/securesign/netcat:${NET_CAT_VER} -f netcat/Dockerfile
 
       - name: push netcat
+        if: github.event.pull_request.merged == true
         run: podman push quay.io/securesign/netcat:${NET_CAT_VER}
 
   build-cosign:
@@ -314,4 +329,5 @@ jobs:
           podman build . --tag quay.io/securesign/cosign:${{ env.COSIGN_VER }} -f Dockerfile
 
       - name: Push Cosign
+        if: github.event.pull_request.merged == true
         run: podman push quay.io/securesign/cosign:${{ env.COSIGN_VER }}
